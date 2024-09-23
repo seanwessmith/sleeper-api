@@ -1,6 +1,6 @@
 {
   "name": "sleeper-api",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "homepage": "https://github.com/seanwessmith/sleeper-api",
   "author": "Sean Smith <seanwessmith@gmail.com>",
   "description": "Sleeper api from https://sleeper.com/",
