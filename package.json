@@ -9,7 +9,7 @@
   "main": "dist/sleeper.js",
   "umd:main": "dist/sleeper.umd.js",
   "scripts": {
-    "build": "bun build --format esm --dts --minify src --outdir ./build && tsc  --emitDeclarationOnly --isolatedDeclarations --declarationDir ./build",
+    "build": "bun build --format esm --dts --minify src --outdir ./build", 
     "test": "bun test",
     "release": "bun run build && git commit -am $npm_package_version && git tag $npm_package_version && git push && git push --tags && bun publish"
   },
