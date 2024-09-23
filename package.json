@@ -1,21 +1,19 @@
 {
-  "name": "sleeper",
-  "version": "2.0.0",
-  "homepage": "https://github.com/developit/sleeper",
-  "author": "Jason Miller <jason@developit.ca>",
-  "description": "A high-level network abstraction that makes working with REST APIs simple.",
+  "name": "sleeper-api",
+  "version": "1.0.0",
+  "homepage": "https://github.com/seanwessmith/sleeper-api",
+  "author": "Sean Smith <seanwessmith@gmail.com>",
+  "description": "Sleeper api from https://sleeper.com/",
   "source": "src/sleeper.js",
   "module": "dist/sleeper.module.js",
   "main": "dist/sleeper.js",
   "umd:main": "dist/sleeper.umd.js",
   "scripts": {
-    "build": "microbundle",
-    "test": "karmatic",
-    "prepublish": "npm run -s build",
-    "release": "npm run build && git commit -am $npm_package_version && git tag $npm_package_version && git push && git push --tags && npm publish"
+    "build": "bun build --format esm --dts --minify src --outdir ./build && tsc  --emitDeclarationOnly --isolatedDeclarations --declarationDir ./build",
+    "test": "bun test",
+    "release": "bun run build && git commit -am $npm_package_version && git tag $npm_package_version && git push && git push --tags && bun publish"
   },
   "eslintConfig": {
-    "extends": "developit",
     "rules": {
       "no-unused-vars": 1
     }
@@ -31,19 +29,20 @@
     "model",
     "ajax"
   ],
-  "repository": "developit/sleeper",
-  "licence": "GPLv3",
+  "repository": "seanwessmith/sleeper-api",
+  "licence": "MIT",
   "devDependencies": {
-    "@types/jest": "^24.0.23",
-    "eslint": "^6.6.0",
-    "eslint-config-developit": "^1.1.1",
-    "expect": "^24.9.0",
-    "karmatic": "^1.4.0",
-    "microbundle": "^0.11.0",
-    "sinon": "^7.5.0",
-    "webpack": "^4.41.2"
+    "@types/axios": "^0.14.0",
+    "@types/bun": "^1.1.10",
+    "@types/node": "^22.5.5",
+    "@types/sinon": "^17.0.3",
+    "eslint": "^9.11.0",
+    "microbundle": "^0.15.1",
+    "sinon": "^19.0.2",
+    "typescript": "^5.6.2"
   },
   "dependencies": {
-    "jan": "^1.1.0"
+    "axios": "^1.7.7",
+    "bun": "^1.1.29"
   }
 }
