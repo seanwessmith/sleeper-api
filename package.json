@@ -9,9 +9,10 @@
   "main": "dist/sleeper.js",
   "umd:main": "dist/sleeper.umd.js",
   "scripts": {
-    "build": "bun build --format esm --dts --minify src --outdir ./build", 
+    "build": "bun build --format esm --minify src --outdir ./dist",
+    "types": "tsc src/index.ts --declaration --emitDeclarationOnly --outDir dist --target ES6 --module CommonJS --strict --esModuleInterop",
     "test": "bun test",
-    "release": "bun run build && git commit -am $npm_package_version && git tag $npm_package_version && git push && git push --tags && bun publish"
+    "release": "bun run build && git commit -am $npm_package_version && git tag $npm_package_version && git push && git push --tags && npm publish"
   },
   "eslintConfig": {
     "rules": {
@@ -34,7 +35,6 @@
   "devDependencies": {
     "@types/axios": "^0.14.0",
     "@types/bun": "^1.1.10",
-    "@types/node": "^22.5.5",
     "@types/sinon": "^17.0.3",
     "eslint": "^9.11.0",
     "microbundle": "^0.15.1",
@@ -43,6 +43,7 @@
   },
   "dependencies": {
     "axios": "^1.7.7",
-    "bun": "^1.1.29"
+    "bun": "^1.1.29",
+    "bun-types": "^1.1.29"
   }
 }

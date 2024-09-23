@@ -1,12 +1,29 @@
 {
   "compilerOptions": {
-    "target": "ES6",
-    "module": "CommonJS",
-    "declaration": true,
-    "outDir": "dist",
-    "strict": true,
-    "esModuleInterop": true,
+    /* Basic Options */
+    "target": "ES6",                          // Specify ECMAScript target version
+    "module": "CommonJS",                     // Specify module code generation
+    "outDir": "./dist",                       // Redirect output structure to the directory
+    "rootDir": "./src",                       // Specify the root directory of input files
+
+    /* Declaration Options */
+    "declaration": true,                      // Generate corresponding '.d.ts' files
+    "emitDeclarationOnly": true,              // Only emit declarations, not JavaScript
+
+    /* Strict Type-Checking Options */
+    "strict": true,                           // Enable all strict type-checking options
+
+    /* Module Resolution Options */
+    "esModuleInterop": true,                  // Enables emit interoperability between CommonJS and ES Modules
+    "forceConsistentCasingInFileNames": true, // Ensure consistent casing in imports
+
+    /* Type Definitions Control */
+    "lib": ["ES6"],                           // Specify only necessary lib files (exclude "DOM" to prevent DOM-related types)
+    "types": ["node", "bun"],                 // Specify only the type definitions you need
+
+    /* Additional Options */
+    "skipLibCheck": true                      // Skip type checking of all declaration files (*.d.ts)
   },
-  "include": ["src"],
-  "exclude": ["node_modules", "dist"]
+  "include": ["src/index.ts"],                 // Specify which files to include
+  "exclude": ["node_modules", "dist"]         // Exclude unnecessary directories
 }

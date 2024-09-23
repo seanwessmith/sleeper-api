@@ -1,4 +1,5 @@
 import axios, { AxiosInstance, AxiosResponse } from "axios";
+import { fetch } from 'bun';
 
 // Define Interfaces for the API responses
 
