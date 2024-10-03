@@ -1,36 +1,36 @@
 # SleeperAPI
 
-![License](https://img.shields.io/npm/l/sleeperapi)
-![Version](https://img.shields.io/npm/v/sleeperapi)
-![Downloads](https://img.shields.io/npm/dm/sleeperapi)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+[![npm version](https://badge.fury.io/js/sleeper-api.svg)](https://badge.fury.io/js/sleeper-api)
+![NPM Downloads](https://img.shields.io/npm/dm/sleeper-api)
 
 SleeperAPI is a TypeScript client library for interacting with the [Sleeper API](https://docs.sleeper.app/). It provides a comprehensive set of methods to fetch and manage data related to users, leagues, rosters, matchups, drafts, players, and more. Whether you're building a fantasy sports application or automating league management tasks, SleeperAPI offers a robust and type-safe way to integrate with Sleeper's platform.
 
 ## Table of Contents
 
 - [SleeperAPI](#sleeperapi)
-	- [Table of Contents](#table-of-contents)
-	- [Features](#features)
-	- [Installation](#installation)
-		- [Using Bun](#using-bun)
-		- [Using npm](#using-npm)
-		- [Using Yarn](#using-yarn)
-	- [Usage](#usage)
-		- [Initialization](#initialization)
-		- [Examples](#examples)
-			- [Fetch a User by Username](#fetch-a-user-by-username)
-			- [Get All Leagues for a User](#get-all-leagues-for-a-user)
-			- [Retrieve All Players for a Sport](#retrieve-all-players-for-a-sport)
-	- [API Reference](#api-reference)
-		- [User Methods](#user-methods)
-		- [League Methods](#league-methods)
-		- [Roster Methods](#roster-methods)
-		- [Matchup Methods](#matchup-methods)
-		- [Draft Methods](#draft-methods)
-		- [Player Methods](#player-methods)
-	- [Error Handling](#error-handling)
-	- [Contributing](#contributing)
-	- [License](#license)
+  - [Table of Contents](#table-of-contents)
+  - [Features](#features)
+  - [Installation](#installation)
+    - [Using Bun](#using-bun)
+    - [Using npm](#using-npm)
+    - [Using Yarn](#using-yarn)
+  - [Usage](#usage)
+    - [Initialization](#initialization)
+    - [Examples](#examples)
+      - [Fetch a User by Username](#fetch-a-user-by-username)
+      - [Get All Leagues for a User](#get-all-leagues-for-a-user)
+      - [Retrieve All Players for a Sport](#retrieve-all-players-for-a-sport)
+  - [API Reference](#api-reference)
+    - [User Methods](#user-methods)
+    - [League Methods](#league-methods)
+    - [Roster Methods](#roster-methods)
+    - [Matchup Methods](#matchup-methods)
+    - [Draft Methods](#draft-methods)
+    - [Player Methods](#player-methods)
+  - [Error Handling](#error-handling)
+  - [Contributing](#contributing)
+  - [License](#license)
 
 ## Features
 
@@ -271,9 +271,5 @@ Please ensure your code follows the project's coding standards and includes rele
 ## License
 
 This project is licensed under the [MIT License](LICENSE).
-
----
-
-**Note**: Replace `https://img.shields.io/npm/l/sleeperapi`, `https://img.shields.io/npm/v/sleeperapi`, and `https://img.shields.io/npm/dm/sleeperapi` with actual badge URLs if you have set up badges for your package. Also, ensure to create a `LICENSE` file in your repository if you haven't already.
 
 If you encounter any issues or have suggestions for improvements, feel free to [open an issue](https://github.com/yourusername/sleeperapi/issues) or submit a pull request.
