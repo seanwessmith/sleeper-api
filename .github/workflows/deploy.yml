@@ -28,7 +28,8 @@ jobs:
     - name: Generate types
       run: bun run types
     
+    - name: Setup NPM authentication
+      run: echo "//registry.npmjs.org/:_authToken=${{ secrets.NPM_TOKEN }}" > ~/.npmrc
+    
     - name: Deploy to NPM
       run: npm publish --access public
-      env:
-        NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
