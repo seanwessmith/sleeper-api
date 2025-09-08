@@ -1,275 +1,244 @@
 # SleeperAPI
 
-[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
-[![npm version](https://badge.fury.io/js/sleeper-api.svg)](https://badge.fury.io/js/sleeper-api)
-![NPM Downloads](https://img.shields.io/npm/dm/sleeper-api)
+A lightweight, type-safe TypeScript client for the official Sleeper API. Fetch users, leagues, rosters, matchups, drafts, players (including trending), state, and more—using native fetch (no external HTTP dependency).
 
-SleeperAPI is a TypeScript client library for interacting with the [Sleeper API](https://docs.sleeper.app/). It provides a comprehensive set of methods to fetch and manage data related to users, leagues, rosters, matchups, drafts, players, and more. Whether you're building a fantasy sports application or automating league management tasks, SleeperAPI offers a robust and type-safe way to integrate with Sleeper's platform.
+- **Type-safe**: Strong TS interfaces (User, League, Roster, etc.)
+- **Zero deps**: Uses built-in fetch (Node 18+, modern browsers)
+- **Browser-ready**: Works in the browser out of the box
+- **Helpful utils**: Includes getAvatarUrl(avatarId, thumbnail)
+
+---
 
 ## Table of Contents
 
-- [SleeperAPI](#sleeperapi)
-  - [Table of Contents](#table-of-contents)
-  - [Features](#features)
-  - [Installation](#installation)
-    - [Using Bun](#using-bun)
-    - [Using npm](#using-npm)
-    - [Using Yarn](#using-yarn)
-  - [Usage](#usage)
-    - [Initialization](#initialization)
-    - [Examples](#examples)
-      - [Fetch a User by Username](#fetch-a-user-by-username)
-      - [Get All Leagues for a User](#get-all-leagues-for-a-user)
-      - [Retrieve All Players for a Sport](#retrieve-all-players-for-a-sport)
-  - [API Reference](#api-reference)
-    - [User Methods](#user-methods)
-    - [League Methods](#league-methods)
-    - [Roster Methods](#roster-methods)
-    - [Matchup Methods](#matchup-methods)
-    - [Draft Methods](#draft-methods)
-    - [Player Methods](#player-methods)
-  - [Error Handling](#error-handling)
-  - [Contributing](#contributing)
-  - [License](#license)
+- [Installation](#installation)
+- [Quickstart](#quickstart)
+- [Usage](#usage)
+  - [Initialization](#initialization)
+  - [Examples](#examples)
+- [API Reference](#api-reference)
+- [Error Handling](#error-handling)
+- [FAQ](#faq)
+- [Contributing](#contributing)
+- [License](#license)
 
-## Features
-
-- **TypeScript Support**: Fully typed interfaces and classes for type-safe development.
-- **Comprehensive Coverage**: Access to users, leagues, rosters, matchups, drafts, players, and more.
-- **Customizable Axios Instance**: Option to provide a custom Axios instance for advanced configurations.
-- **Error Handling**: Graceful handling of API errors with meaningful messages.
-- **Utility Functions**: Helper functions like `getAvatarUrl` for common tasks.
+---
 
 ## Installation
 
-You can install SleeperAPI using [Bun](https://bun.sh/), [npm](https://www.npmjs.com/), or [Yarn](https://yarnpkg.com/).
-
-### Using Bun
-
 ```bash
-bun add sleeperapi axios
+# npm
+npm install sleeperapi
+
+# bun
+bun add sleeperapi
+
+# yarn
+yarn add sleeperapi
 ```
 
-### Using npm
+This package targets ESM and relies on global fetch:
+- Node 18+, Bun 1.1+, or any modern browser.
 
-```bash
-npm install sleeperapi axios
+---
+
+## Quickstart
+
+```typescript
+import SleeperAPI, { getAvatarUrl } from 'sleeperapi';
+
+const sleeper = new SleeperAPI();
+
+const run = async () => {
+  // 1) Find a user
+  const user = await sleeper.getUserByUsername('john_doe');
+
+  // 2) Their NFL leagues for 2024
+  const leagues = await sleeper.getLeaguesForUser(user.user_id, 'nfl', '2024');
+
+  // 3) Current display week (from Sleeper state)
+  const state = await sleeper.getState('nfl');
+  const week = state.display_week;
+
+  // 4) Matchups for first league this week
+  const leagueId = leagues[0].league_id;
+  const matchups = await sleeper.getMatchups(leagueId, week);
+
+  // 5) Handy: avatar URL
+  const avatarUrl = getAvatarUrl(user.avatar, true);
+
+  console.log({
+    user: user.display_name,
+    league: leagues[0].name,
+    week,
+    matchups: matchups.length,
+    avatarUrl
+  });
+};
+
+run();
 ```
 
-### Using Yarn
-
-```bash
-yarn add sleeperapi axios
-```
-
-**Note**: This package depends on `axios`. Ensure it's installed in your project.
+---
 
 ## Usage
 
 ### Initialization
 
-Import the `SleeperAPI` class and create an instance. You can optionally provide a custom Axios instance if you need to customize request configurations.
-
 ```typescript
 import SleeperAPI from 'sleeperapi';
-import axios from 'axios';
 
-// Optional: Create a custom Axios instance
-const customAxios = axios.create({
-  baseURL: 'https://api.sleeper.app/v1',
-  timeout: 15000, // 15 seconds timeout
-});
-
-// Initialize SleeperAPI with the custom Axios instance
-const sleeper = new SleeperAPI(customAxios);
-
-// Or initialize with default settings
-const sleeperDefault = new SleeperAPI();
+// Default base URL (https://api.sleeper.app/v1) and 10s timeout
+const sleeper = new SleeperAPI();
 ```
 
 ### Examples
 
-#### Fetch a User by Username
+#### Get a user by username
 
 ```typescript
-import SleeperAPI from 'sleeperapi';
-
-const sleeper = new SleeperAPI();
-
-async function fetchUser() {
-  try {
-    const user = await sleeper.getUserByUsername('john_doe');
-    console.log(user);
-  } catch (error) {
-    console.error(error.message);
-  }
-}
-
-fetchUser();
+const user = await sleeper.getUserByUsername('john_doe');
 ```
 
-#### Get All Leagues for a User
+#### Leagues for a user
 
 ```typescript
-import SleeperAPI from 'sleeperapi';
-
-const sleeper = new SleeperAPI();
-
-async function fetchLeagues() {
-  try {
-    const leagues = await sleeper.getLeaguesForUser('user_id_123', 'nfl', '2023');
-    console.log(leagues);
-  } catch (error) {
-    console.error(error.message);
-  }
-}
-
-fetchLeagues();
+const leagues = await sleeper.getLeaguesForUser('user_id_123', 'nfl', '2024');
 ```
 
-#### Retrieve All Players for a Sport
+#### Rosters & users in a league
 
 ```typescript
-import SleeperAPI from 'sleeperapi';
-
-const sleeper = new SleeperAPI();
-
-async function fetchPlayers() {
-  try {
-    const players = await sleeper.getAllPlayers('nfl');
-    console.log(players);
-  } catch (error) {
-    console.error(error.message);
-  }
-}
-
-fetchPlayers();
+const rosters = await sleeper.getRosters('league_id_abc');
+const users   = await sleeper.getUsersInLeague('league_id_abc');
 ```
+
+#### Weekly matchups
+
+```typescript
+const state    = await sleeper.getState('nfl');
+const matchups = await sleeper.getMatchups('league_id_abc', state.display_week);
+```
+
+#### Transactions for a round
+
+```typescript
+const txns = await sleeper.getTransactions('league_id_abc', 1);
+```
+
+#### Playoffs brackets
+
+```typescript
+const winners = await sleeper.getWinnersBracket('league_id_abc');
+const losers  = await sleeper.getLosersBracket('league_id_abc');
+```
+
+#### Drafts & picks
+
+```typescript
+const drafts      = await sleeper.getDraftsForLeague('league_id_abc');
+const draft       = await sleeper.getDraft(drafts[0].draft_id);
+const picks       = await sleeper.getPicksInDraft(draft.draft_id);
+const tradedPicks = await sleeper.getTradedPicksInDraft(draft.draft_id);
+```
+
+#### Players & trending
+
+```typescript
+const players  = await sleeper.getAllPlayers('nfl');  // { [playerId]: Player }
+const trending = await sleeper.getTrendingPlayers('nfl', 'add', 24, 25);
+```
+
+#### State (season/week info)
+
+```typescript
+const state = await sleeper.getState('nfl'); // { week, season, display_week, ... }
+```
+
+#### Avatars
+
+```typescript
+import { getAvatarUrl } from 'sleeperapi';
+const url = getAvatarUrl('avatar_hash', true); // true => thumbnail
+```
+
+---
 
 ## API Reference
 
-### User Methods
-
+### Users
 - `getUserByUsername(username: string): Promise<User>`
-  - Fetch a user by their username.
-  
 - `getUserById(userId: string): Promise<User>`
-  - Fetch a user by their user ID.
 
-### League Methods
-
+### Leagues
 - `getLeaguesForUser(userId: string, sport: string, season: string): Promise<League[]>`
-  - Retrieve all leagues for a specific user.
-
 - `getLeague(leagueId: string): Promise<League>`
-  - Get details of a specific league.
-
-- `getRosters(leagueId: string): Promise<Roster[]>`
-  - Fetch all rosters within a league.
-
 - `getUsersInLeague(leagueId: string): Promise<User[]>`
-  - Get all users participating in a league.
-
+- `getRosters(leagueId: string): Promise<Roster[]>`
 - `getMatchups(leagueId: string, week: number): Promise<Matchup[]>`
-  - Retrieve all matchups for a given week in a league.
-
 - `getWinnersBracket(leagueId: string): Promise<BracketMatchup[]>`
-  - Get the winners bracket of a league.
-
 - `getLosersBracket(leagueId: string): Promise<BracketMatchup[]>`
-  - Get the losers bracket of a league.
-
 - `getTransactions(leagueId: string, round: number): Promise<Transaction[]>`
-  - Fetch all transactions for a specific round in a league.
-
 - `getTradedPicks(leagueId: string): Promise<DraftPick[]>`
-  - Retrieve all traded draft picks in a league.
 
-### Roster Methods
+### State
+- `getState(sport: string): Promise<State>`
 
-*(Similar methods related to rosters can be documented here if applicable.)*
-
-### Matchup Methods
-
-*(Similar methods related to matchups can be documented here if applicable.)*
-
-### Draft Methods
-
+### Drafts
 - `getDraftsForUser(userId: string, sport: string, season: string): Promise<Draft[]>`
-  - Fetch all drafts associated with a user.
-
 - `getDraftsForLeague(leagueId: string): Promise<Draft[]>`
-  - Retrieve all drafts within a league.
-
 - `getDraft(draftId: string): Promise<Draft>`
-  - Get details of a specific draft.
-
 - `getPicksInDraft(draftId: string): Promise<Pick[]>`
-  - Fetch all picks in a draft.
-
 - `getTradedPicksInDraft(draftId: string): Promise<DraftPick[]>`
-  - Retrieve all traded picks in a draft.
 
-### Player Methods
-
-- `getAllPlayers(sport: string): Promise<{ [playerId: string]: Player }>`
-  - Fetch all players for a specific sport.
-
+### Players
+- `getAllPlayers(sport?: string): Promise<{ [playerId: string]: Player }>`
 - `getTrendingPlayers(sport: string, type: 'add' | 'drop', lookbackHours?: number, limit?: number): Promise<TrendingPlayer[]>`
-  - Get trending players based on recent activity.
+
+**Exported Types**: `User`, `League`, `Roster`, `Matchup`, `BracketMatchup`, `Transaction`, `DraftPick`, `State`, `Draft`, `Pick`, `Player`, `TrendingPlayer`, plus `getAvatarUrl`.
+
+---
 
 ## Error Handling
 
-SleeperAPI handles errors gracefully by catching them and throwing meaningful error messages. Ensure to use `try-catch` blocks when making asynchronous calls to handle potential errors.
+All methods may throw. Errors are normalized to friendly Error messages (including timeouts). Typical cases:
+- **400** — Bad Request (invalid params)
+- **404** — Not Found
+- **429** — Too Many Requests (rate limited)
+- **500 / 503** — Server issues
+- **Timeout** — "Request timeout"
+
+Use try/catch:
 
 ```typescript
 try {
-  const user = await sleeper.getUserByUsername('invalid_username');
-} catch (error) {
-  console.error(error.message); // Outputs a user-friendly error message
+  const user = await sleeper.getUserByUsername('nope');
+} catch (err: any) {
+  console.error(err.message);
 }
 ```
 
-Common error messages include:
+---
 
-- **Bad Request**: Invalid request parameters.
-- **Not Found**: Resource does not exist.
-- **Too Many Requests**: Rate limiting in effect.
-- **Internal Server Error**: Server-side issues.
-- **Service Unavailable**: Service is temporarily offline.
-- **No Response**: No response received from the server.
-- **Unexpected Error**: Other unforeseen errors.
+## FAQ
 
-## Contributing
+**What environments are supported?**  
+Node 18+, Bun 1.1+, and modern browsers (global fetch available).
 
-Contributions are welcome! If you'd like to contribute to SleeperAPI, please follow these steps:
+**Do I need an HTTP client like axios?**  
+No—this library uses native fetch and has no external HTTP dependency.
 
-1. **Fork the Repository**
+**How big is getAllPlayers?**  
+It can be large. Consider caching and refreshing periodically (e.g., on startup + daily).
 
-2. **Create a Feature Branch**
+**How do I pick the "current week"?**  
+Call `getState('nfl')` and use `display_week`.
 
-   ```bash
-   git checkout -b feature/YourFeature
-   ```
+**What sports are supported?**  
+Sleeper's common sport path is 'nfl'. Other sports depend on Sleeper's public endpoints.
 
-3. **Commit Your Changes**
-
-   ```bash
-   git commit -m "Add some feature"
-   ```
-
-4. **Push to the Branch**
-
-   ```bash
-   git push origin feature/YourFeature
-   ```
-
-5. **Open a Pull Request**
-
-Please ensure your code follows the project's coding standards and includes relevant tests.
+---
 
 ## License
 
-This project is licensed under the [MIT License](LICENSE).
-
-If you encounter any issues or have suggestions for improvements, feel free to [open an issue](https://github.com/yourusername/sleeperapi/issues) or submit a pull request.
+MIT © seanwessmith. See LICENSE.
