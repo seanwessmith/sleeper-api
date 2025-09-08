@@ -2,11 +2,6 @@
 
 import { describe, it, beforeEach, afterEach, expect } from "bun:test";
 import sinon, { SinonStub } from "sinon";
-import axios, {
-  AxiosInstance,
-  AxiosResponse,
-  InternalAxiosRequestConfig,
-} from "axios";
 import SleeperAPI, {
   User,
   League,
@@ -22,26 +17,37 @@ import SleeperAPI, {
   TrendingPlayer,
 } from "../src";
 
+// Mock Response interface matching our ApiResponse structure
+interface MockResponse<T> {
+  data: T;
+  status: number;
+  statusText: string;
+}
+
+// Helper function to create mock fetch response
+function createMockResponse<T>(data: T, status: number = 200): Response {
+  return {
+    ok: status >= 200 && status < 300,
+    status,
+    statusText: status === 200 ? 'OK' : 'Error',
+    json: async () => data,
+    text: async () => JSON.stringify(data),
+  } as Response;
+}
+
 describe("SleeperAPI", () => {
   let api: SleeperAPI;
-  let mockAxios: AxiosInstance;
-  let axiosGetStub: SinonStub;
+  let fetchStub: SinonStub;
 
   beforeEach(() => {
-    // Create a mock Axios instance
-    mockAxios = axios.create();
-    // Stub the 'get' method on the mock Axios instance
-    axiosGetStub = sinon.stub(mockAxios, "get");
-    // Inject the mocked Axios instance into SleeperAPI
-    api = new SleeperAPI(mockAxios);
+    // Stub the global fetch function
+    fetchStub = sinon.stub(global, "fetch" as any);
+    // Create SleeperAPI instance (it will use the default ApiClient)
+    api = new SleeperAPI();
   });
 
   afterEach(() => {
-    // Restore the original Axios behavior
-    sinon.restore();
-  });
-
-  afterEach(() => {
+    // Restore the original fetch behavior
     sinon.restore();
   });
 
@@ -56,19 +62,12 @@ describe("SleeperAPI", () => {
         avatar: "cc12ec49965eb7856f84d71cf85306af",
       };
 
-      const response: AxiosResponse<User> = {
-        data: mockUser,
-        status: 200,
-        statusText: "OK",
-        headers: {},
-        config: {} as InternalAxiosRequestConfig,
-      };
-
-      axiosGetStub.withArgs(`/user/sleeperuser`).resolves(response);
+      fetchStub.resolves(createMockResponse(mockUser));
 
       const user = await api.getUserByUsername("sleeperuser");
       expect(user).toEqual(mockUser);
-      expect(axiosGetStub.calledOnce).toBe(true);
+      expect(fetchStub.calledOnce).toBe(true);
+      expect(fetchStub.firstCall.args[0]).toBe("https://api.sleeper.app/v1/user/sleeperuser");
     });
 
     it("should fetch user by ID successfully", async () => {
@@ -79,40 +78,22 @@ describe("SleeperAPI", () => {
         avatar: "cc12ec49965eb7856f84d71cf85306af",
       };
 
-      const response: AxiosResponse<User> = {
-        data: mockUser,
-        status: 200,
-        statusText: "OK",
-        headers: {},
-        config: {} as InternalAxiosRequestConfig,
-      };
-
-      axiosGetStub.withArgs(`/user/12345678`).resolves(response);
+      fetchStub.resolves(createMockResponse(mockUser));
 
       const user = await api.getUserById("12345678");
       expect(user).toEqual(mockUser);
-      expect(axiosGetStub.calledOnce).toBe(true);
+      expect(fetchStub.calledOnce).toBe(true);
+      expect(fetchStub.firstCall.args[0]).toBe("https://api.sleeper.app/v1/user/12345678");
     });
 
     it("should handle 404 error when user not found", async () => {
-      const error = {
-        response: {
-          status: 404,
-          statusText: "Not Found",
-          data: {},
-          headers: {},
-          config: {},
-        },
-        isAxiosError: true,
-        toJSON: () => ({}),
-      };
-
-      axiosGetStub.withArgs(`/user/nonexistentuser`).rejects(error);
+      fetchStub.resolves(createMockResponse({}, 404));
 
       await expect(api.getUserByUsername("nonexistentuser")).rejects.toThrow(
         "Not Found: The requested resource could not be found."
       );
-      expect(axiosGetStub.calledOnce).toBe(true);
+      expect(fetchStub.calledOnce).toBe(true);
+      expect(fetchStub.firstCall.args[0]).toBe("https://api.sleeper.app/v1/user/nonexistentuser");
     });
   });
 
@@ -153,21 +134,12 @@ describe("SleeperAPI", () => {
         },
       ];
 
-      const response: AxiosResponse<League[]> = {
-        data: mockLeagues,
-        status: 200,
-        statusText: "OK",
-        headers: {},
-        config: {} as InternalAxiosRequestConfig,
-      };
-
-      axiosGetStub
-        .withArgs(`/user/12345678/leagues/nfl/2018`)
-        .resolves(response);
+      fetchStub.resolves(createMockResponse(mockLeagues));
 
       const leagues = await api.getLeaguesForUser("12345678", "nfl", "2018");
       expect(leagues).toEqual(mockLeagues);
-      expect(axiosGetStub.calledOnce).toBe(true);
+      expect(fetchStub.calledOnce).toBe(true);
+      expect(fetchStub.firstCall.args[0]).toBe("https://api.sleeper.app/v1/user/12345678/leagues/nfl/2018");
     });
 
     it("should fetch a specific league successfully", async () => {
@@ -187,40 +159,22 @@ describe("SleeperAPI", () => {
         avatar: "efaefa889ae24046a53265a3c71b8b64",
       };
 
-      const response: AxiosResponse<League> = {
-        data: mockLeague,
-        status: 200,
-        statusText: "OK",
-        headers: {},
-        config: {} as InternalAxiosRequestConfig,
-      };
-
-      axiosGetStub.withArgs(`/league/289646328504385536`).resolves(response);
+      fetchStub.resolves(createMockResponse(mockLeague));
 
       const league = await api.getLeague("289646328504385536");
       expect(league).toEqual(mockLeague);
-      expect(axiosGetStub.calledOnce).toBe(true);
+      expect(fetchStub.calledOnce).toBe(true);
+      expect(fetchStub.firstCall.args[0]).toBe("https://api.sleeper.app/v1/league/289646328504385536");
     });
 
     it("should handle 500 error when fetching a league", async () => {
-      const error = {
-        response: {
-          status: 500,
-          statusText: "Internal Server Error",
-          data: {},
-          headers: {},
-          config: {},
-        },
-        isAxiosError: true,
-        toJSON: () => ({}),
-      };
-
-      axiosGetStub.withArgs(`/league/invalidLeagueId`).rejects(error);
+      fetchStub.resolves(createMockResponse({}, 500));
 
       await expect(api.getLeague("invalidLeagueId")).rejects.toThrow(
         "Internal Server Error: Problem with the server."
       );
-      expect(axiosGetStub.calledOnce).toBe(true);
+      expect(fetchStub.calledOnce).toBe(true);
+      expect(fetchStub.firstCall.args[0]).toBe("https://api.sleeper.app/v1/league/invalidLeagueId");
     });
   });
 
@@ -267,44 +221,22 @@ describe("SleeperAPI", () => {
         // Add more rosters as needed
       ];
 
-      const response: AxiosResponse<Roster[]> = {
-        data: mockRosters,
-        status: 200,
-        statusText: "OK",
-        headers: {},
-        config: {} as InternalAxiosRequestConfig,
-      };
-
-      axiosGetStub
-        .withArgs(`/league/206827432160788480/rosters`)
-        .resolves(response);
+      fetchStub.resolves(createMockResponse(mockRosters));
 
       const rosters = await api.getRosters("206827432160788480");
       expect(rosters).toEqual(mockRosters);
-      expect(axiosGetStub.calledOnce).toBe(true);
+      expect(fetchStub.calledOnce).toBe(true);
+      expect(fetchStub.firstCall.args[0]).toBe("https://api.sleeper.app/v1/league/206827432160788480/rosters");
     });
 
     it("should handle 429 error when fetching rosters", async () => {
-      const error = {
-        response: {
-          status: 429,
-          statusText: "Too Many Requests",
-          data: {},
-          headers: {},
-          config: {},
-        },
-        isAxiosError: true,
-        toJSON: () => ({}),
-      };
-
-      axiosGetStub
-        .withArgs(`/league/206827432160788480/rosters`)
-        .rejects(error);
+      fetchStub.resolves(createMockResponse({}, 429));
 
       await expect(api.getRosters("206827432160788480")).rejects.toThrow(
         "Too Many Requests: You are being rate limited."
       );
-      expect(axiosGetStub.calledOnce).toBe(true);
+      expect(fetchStub.calledOnce).toBe(true);
+      expect(fetchStub.firstCall.args[0]).toBe("https://api.sleeper.app/v1/league/206827432160788480/rosters");
     });
   });
 
@@ -327,42 +259,22 @@ describe("SleeperAPI", () => {
         },
       ];
 
-      const response: AxiosResponse<User[]> = {
-        data: mockUsers,
-        status: 200,
-        statusText: "OK",
-        headers: {},
-        config: {} as InternalAxiosRequestConfig,
-      };
-
-      axiosGetStub
-        .withArgs(`/league/289646328504385536/users`)
-        .resolves(response);
+      fetchStub.resolves(createMockResponse(mockUsers));
 
       const users = await api.getUsersInLeague("289646328504385536");
       expect(users).toEqual(mockUsers);
-      expect(axiosGetStub.calledOnce).toBe(true);
+      expect(fetchStub.calledOnce).toBe(true);
+      expect(fetchStub.firstCall.args[0]).toBe("https://api.sleeper.app/v1/league/289646328504385536/users");
     });
 
     it("should handle 400 error when fetching users in a league", async () => {
-      const error = {
-        response: {
-          status: 400,
-          statusText: "Bad Request",
-          data: {},
-          headers: {},
-          config: {},
-        },
-        isAxiosError: true,
-        toJSON: () => ({}),
-      };
-
-      axiosGetStub.withArgs(`/league/invalidLeagueId/users`).rejects(error);
+      fetchStub.resolves(createMockResponse({}, 400));
 
       await expect(api.getUsersInLeague("invalidLeagueId")).rejects.toThrow(
         "Bad Request: Your request is invalid."
       );
-      expect(axiosGetStub.calledOnce).toBe(true);
+      expect(fetchStub.calledOnce).toBe(true);
+      expect(fetchStub.firstCall.args[0]).toBe("https://api.sleeper.app/v1/league/invalidLeagueId/users");
     });
   });
 
@@ -408,38 +320,23 @@ describe("SleeperAPI", () => {
         // Add more matchups as needed
       ];
 
-      const response: AxiosResponse<Matchup[]> = {
-        data: mockMatchups,
-        status: 200,
-        statusText: "OK",
-        headers: {},
-        config: {} as InternalAxiosRequestConfig,
-      };
-
-      axiosGetStub
-        .withArgs(`/league/289646328504385536/matchups/1`)
-        .resolves(response);
+      fetchStub.resolves(createMockResponse(mockMatchups));
 
       const matchups = await api.getMatchups("289646328504385536", 1);
       expect(matchups).toEqual(mockMatchups);
-      expect(axiosGetStub.calledOnce).toBe(true);
+      expect(fetchStub.calledOnce).toBe(true);
+      expect(fetchStub.firstCall.args[0]).toBe("https://api.sleeper.app/v1/league/289646328504385536/matchups/1");
     });
 
     it("should handle no response error when fetching matchups", async () => {
-      const error = {
-        request: {},
-        isAxiosError: true,
-        toJSON: () => ({}),
-      };
-
-      axiosGetStub
-        .withArgs(`/league/289646328504385536/matchups/1`)
-        .rejects(error);
+      const error = new Error("No response received from the server.");
+      fetchStub.rejects(error);
 
       await expect(api.getMatchups("289646328504385536", 1)).rejects.toThrow(
         "No response received from the server."
       );
-      expect(axiosGetStub.calledOnce).toBe(true);
+      expect(fetchStub.calledOnce).toBe(true);
+      expect(fetchStub.firstCall.args[0]).toBe("https://api.sleeper.app/v1/league/289646328504385536/matchups/1");
     });
   });
 
@@ -454,44 +351,22 @@ describe("SleeperAPI", () => {
         // Add more bracket matchups as needed
       ];
 
-      const response: AxiosResponse<BracketMatchup[]> = {
-        data: mockBracket,
-        status: 200,
-        statusText: "OK",
-        headers: {},
-        config: {} as InternalAxiosRequestConfig,
-      };
-
-      axiosGetStub
-        .withArgs(`/league/289646328504385536/winners_bracket`)
-        .resolves(response);
+      fetchStub.resolves(createMockResponse(mockBracket));
 
       const bracket = await api.getWinnersBracket("289646328504385536");
       expect(bracket).toEqual(mockBracket);
-      expect(axiosGetStub.calledOnce).toBe(true);
+      expect(fetchStub.calledOnce).toBe(true);
+      expect(fetchStub.firstCall.args[0]).toBe("https://api.sleeper.app/v1/league/289646328504385536/winners_bracket");
     });
 
     it("should handle 503 error when fetching winners bracket", async () => {
-      const error = {
-        response: {
-          status: 503,
-          statusText: "Service Unavailable",
-          data: {},
-          headers: {},
-          config: {},
-        },
-        isAxiosError: true,
-        toJSON: () => ({}),
-      };
-
-      axiosGetStub
-        .withArgs(`/league/289646328504385536/winners_bracket`)
-        .rejects(error);
+      fetchStub.resolves(createMockResponse({}, 503));
 
       await expect(api.getWinnersBracket("289646328504385536")).rejects.toThrow(
         "Service Unavailable: The service is temporarily offline."
       );
-      expect(axiosGetStub.calledOnce).toBe(true);
+      expect(fetchStub.calledOnce).toBe(true);
+      expect(fetchStub.firstCall.args[0]).toBe("https://api.sleeper.app/v1/league/289646328504385536/winners_bracket");
     });
   });
 
@@ -541,46 +416,23 @@ describe("SleeperAPI", () => {
         // Add more transactions as needed
       ];
 
-      const response: AxiosResponse<Transaction[]> = {
-        data: mockTransactions,
-        status: 200,
-        statusText: "OK",
-        headers: {},
-        config: {} as InternalAxiosRequestConfig,
-      };
-
-      axiosGetStub
-        .withArgs(`/league/289646328504385536/transactions/1`)
-        .resolves(response);
+      fetchStub.resolves(createMockResponse(mockTransactions));
 
       const transactions = await api.getTransactions("289646328504385536", 1);
       expect(transactions).toEqual(mockTransactions);
-      expect(axiosGetStub.calledOnce).toBe(true);
+      expect(fetchStub.calledOnce).toBe(true);
+      expect(fetchStub.firstCall.args[0]).toBe("https://api.sleeper.app/v1/league/289646328504385536/transactions/1");
     });
 
     it("should handle 400 error when fetching transactions", async () => {
-      const error = {
-        response: {
-          status: 400,
-          statusText: "Bad Request",
-          data: {},
-          headers: {},
-          config: {},
-        },
-        isAxiosError: true,
-        toJSON: () => ({}),
-      };
-
-      axiosGetStub
-        .withArgs(`/league/289646328504385536/transactions/invalidRound`)
-        .rejects(error);
+      fetchStub.resolves(createMockResponse({}, 400));
 
       await expect(
         api.getTransactions("289646328504385536", NaN)
       ).rejects.toThrow(
-        "Unexpected Error: undefined is not an object (evaluating '(await this.axiosInstance.get(`/league/${leagueId}/transactions/${round}`)).data')"
+        "Bad Request: Your request is invalid."
       );
-      expect(axiosGetStub.calledOnce).toBe(true);
+      expect(fetchStub.calledOnce).toBe(true);
     });
   });
 
@@ -605,44 +457,22 @@ describe("SleeperAPI", () => {
         },
       ];
 
-      const response: AxiosResponse<DraftPick[]> = {
-        data: mockTradedPicks,
-        status: 200,
-        statusText: "OK",
-        headers: {},
-        config: {} as InternalAxiosRequestConfig,
-      };
-
-      axiosGetStub
-        .withArgs(`/league/289646328504385536/traded_picks`)
-        .resolves(response);
+      fetchStub.resolves(createMockResponse(mockTradedPicks));
 
       const tradedPicks = await api.getTradedPicks("289646328504385536");
       expect(tradedPicks).toEqual(mockTradedPicks);
-      expect(axiosGetStub.calledOnce).toBe(true);
+      expect(fetchStub.calledOnce).toBe(true);
+      expect(fetchStub.firstCall.args[0]).toBe("https://api.sleeper.app/v1/league/289646328504385536/traded_picks");
     });
 
     it("should handle 404 error when fetching traded picks", async () => {
-      const error = {
-        response: {
-          status: 404,
-          statusText: "Not Found",
-          data: {},
-          headers: {},
-          config: {},
-        },
-        isAxiosError: true,
-        toJSON: () => ({}),
-      };
-
-      axiosGetStub
-        .withArgs(`/league/invalidLeagueId/traded_picks`)
-        .rejects(error);
+      fetchStub.resolves(createMockResponse({}, 404));
 
       await expect(api.getTradedPicks("invalidLeagueId")).rejects.toThrow(
         "Not Found: The requested resource could not be found."
       );
-      expect(axiosGetStub.calledOnce).toBe(true);
+      expect(fetchStub.calledOnce).toBe(true);
+      expect(fetchStub.firstCall.args[0]).toBe("https://api.sleeper.app/v1/league/invalidLeagueId/traded_picks");
     });
   });
 
@@ -662,34 +492,23 @@ describe("SleeperAPI", () => {
         display_week: 3,
       };
 
-      const response: AxiosResponse<State> = {
-        data: mockState,
-        status: 200,
-        statusText: "OK",
-        headers: {},
-        config: {} as InternalAxiosRequestConfig,
-      };
-
-      axiosGetStub.withArgs(`/state/nfl`).resolves(response);
+      fetchStub.resolves(createMockResponse(mockState));
 
       const state = await api.getState("nfl");
       expect(state).toEqual(mockState);
-      expect(axiosGetStub.calledOnce).toBe(true);
+      expect(fetchStub.calledOnce).toBe(true);
+      expect(fetchStub.firstCall.args[0]).toBe("https://api.sleeper.app/v1/state/nfl");
     });
 
     it("should handle network error when fetching state", async () => {
-      const error = {
-        message: "Network Error",
-        isAxiosError: true,
-        toJSON: () => ({}),
-      };
-
-      axiosGetStub.withArgs(`/state/nfl`).rejects(error);
+      const error = new Error("Network Error");
+      fetchStub.rejects(error);
 
       await expect(api.getState("nfl")).rejects.toThrow(
-        "Axios Error: Network Error"
+        "Network Error"
       );
-      expect(axiosGetStub.calledOnce).toBe(true);
+      expect(fetchStub.calledOnce).toBe(true);
+      expect(fetchStub.firstCall.args[0]).toBe("https://api.sleeper.app/v1/state/nfl");
     });
   });
 
@@ -719,42 +538,22 @@ describe("SleeperAPI", () => {
         // Add more drafts as needed
       ];
 
-      const response: AxiosResponse<Draft[]> = {
-        data: mockDrafts,
-        status: 200,
-        statusText: "OK",
-        headers: {},
-        config: {} as InternalAxiosRequestConfig,
-      };
-
-      axiosGetStub
-        .withArgs(`/user/12345678/drafts/nfl/2018`)
-        .resolves(response);
+      fetchStub.resolves(createMockResponse(mockDrafts));
 
       const drafts = await api.getDraftsForUser("12345678", "nfl", "2018");
       expect(drafts).toEqual(mockDrafts);
-      expect(axiosGetStub.calledOnce).toBe(true);
+      expect(fetchStub.calledOnce).toBe(true);
+      expect(fetchStub.firstCall.args[0]).toBe("https://api.sleeper.app/v1/user/12345678/drafts/nfl/2018");
     });
 
     it("should handle 500 error when fetching drafts for a user", async () => {
-      const error = {
-        response: {
-          status: 500,
-          statusText: "Internal Server Error",
-          data: {},
-          headers: {},
-          config: {},
-        },
-        isAxiosError: true,
-        toJSON: () => ({}),
-      };
-
-      axiosGetStub.withArgs(`/user/12345678/drafts/nfl/2018`).rejects(error);
+      fetchStub.resolves(createMockResponse({}, 500));
 
       await expect(
         api.getDraftsForUser("12345678", "nfl", "2018")
       ).rejects.toThrow("Internal Server Error: Problem with the server.");
-      expect(axiosGetStub.calledOnce).toBe(true);
+      expect(fetchStub.calledOnce).toBe(true);
+      expect(fetchStub.firstCall.args[0]).toBe("https://api.sleeper.app/v1/user/12345678/drafts/nfl/2018");
     });
 
     it("should fetch a specific draft successfully", async () => {
@@ -778,30 +577,23 @@ describe("SleeperAPI", () => {
         created: 1515700610526,
       };
 
-      const response: AxiosResponse<Draft> = {
-        data: mockDraft,
-        status: 200,
-        statusText: "OK",
-        headers: {},
-        config: {} as InternalAxiosRequestConfig,
-      };
-
-      axiosGetStub.withArgs(`/draft/257270643320426496`).resolves(response);
+      fetchStub.resolves(createMockResponse(mockDraft));
 
       const draft = await api.getDraft("257270643320426496");
       expect(draft).toEqual(mockDraft);
-      expect(axiosGetStub.calledOnce).toBe(true);
+      expect(fetchStub.calledOnce).toBe(true);
+      expect(fetchStub.firstCall.args[0]).toBe("https://api.sleeper.app/v1/draft/257270643320426496");
     });
 
     it("should handle unexpected error when fetching a draft", async () => {
       const error = new Error("Unexpected Error");
-
-      axiosGetStub.withArgs(`/draft/257270643320426496`).rejects(error);
+      fetchStub.rejects(error);
 
       await expect(api.getDraft("257270643320426496")).rejects.toThrow(
-        "Unexpected Error: Unexpected Error"
+        "Unexpected Error"
       );
-      expect(axiosGetStub.calledOnce).toBe(true);
+      expect(fetchStub.calledOnce).toBe(true);
+      expect(fetchStub.firstCall.args[0]).toBe("https://api.sleeper.app/v1/draft/257270643320426496");
     });
 
     it("should fetch all picks in a draft successfully", async () => {
@@ -820,42 +612,22 @@ describe("SleeperAPI", () => {
         // Add more picks as needed
       ];
 
-      const response: AxiosResponse<Pick[]> = {
-        data: mockPicks,
-        status: 200,
-        statusText: "OK",
-        headers: {},
-        config: {} as InternalAxiosRequestConfig,
-      };
-
-      axiosGetStub
-        .withArgs(`/draft/257270643320426496/picks`)
-        .resolves(response);
+      fetchStub.resolves(createMockResponse(mockPicks));
 
       const picks = await api.getPicksInDraft("257270643320426496");
       expect(picks).toEqual(mockPicks);
-      expect(axiosGetStub.calledOnce).toBe(true);
+      expect(fetchStub.calledOnce).toBe(true);
+      expect(fetchStub.firstCall.args[0]).toBe("https://api.sleeper.app/v1/draft/257270643320426496/picks");
     });
 
     it("should handle 404 error when fetching picks in a draft", async () => {
-      const error = {
-        response: {
-          status: 404,
-          statusText: "Not Found",
-          data: {},
-          headers: {},
-          config: {},
-        },
-        isAxiosError: true,
-        toJSON: () => ({}),
-      };
-
-      axiosGetStub.withArgs(`/draft/invalidDraftId/picks`).rejects(error);
+      fetchStub.resolves(createMockResponse({}, 404));
 
       await expect(api.getPicksInDraft("invalidDraftId")).rejects.toThrow(
         "Not Found: The requested resource could not be found."
       );
-      expect(axiosGetStub.calledOnce).toBe(true);
+      expect(fetchStub.calledOnce).toBe(true);
+      expect(fetchStub.firstCall.args[0]).toBe("https://api.sleeper.app/v1/draft/invalidDraftId/picks");
     });
 
     it("should fetch traded picks in a draft successfully", async () => {
@@ -876,38 +648,23 @@ describe("SleeperAPI", () => {
         },
       ];
 
-      const response: AxiosResponse<DraftPick[]> = {
-        data: mockTradedPicks,
-        status: 200,
-        statusText: "OK",
-        headers: {},
-        config: {} as InternalAxiosRequestConfig,
-      };
-
-      axiosGetStub
-        .withArgs(`/draft/257270643320426496/traded_picks`)
-        .resolves(response);
+      fetchStub.resolves(createMockResponse(mockTradedPicks));
 
       const tradedPicks = await api.getTradedPicksInDraft("257270643320426496");
       expect(tradedPicks).toEqual(mockTradedPicks);
-      expect(axiosGetStub.calledOnce).toBe(true);
+      expect(fetchStub.calledOnce).toBe(true);
+      expect(fetchStub.firstCall.args[0]).toBe("https://api.sleeper.app/v1/draft/257270643320426496/traded_picks");
     });
 
     it("should handle network error when fetching traded picks in a draft", async () => {
-      const error = {
-        message: "Network Error",
-        isAxiosError: true,
-        toJSON: () => ({}),
-      };
-
-      axiosGetStub
-        .withArgs(`/draft/257270643320426496/traded_picks`)
-        .rejects(error);
+      const error = new Error("Network Error");
+      fetchStub.rejects(error);
 
       await expect(
         api.getTradedPicksInDraft("257270643320426496")
-      ).rejects.toThrow("Axios Error: Network Error");
-      expect(axiosGetStub.calledOnce).toBe(true);
+      ).rejects.toThrow("Network Error");
+      expect(fetchStub.calledOnce).toBe(true);
+      expect(fetchStub.firstCall.args[0]).toBe("https://api.sleeper.app/v1/draft/257270643320426496/traded_picks");
     });
   });
 
@@ -953,40 +710,22 @@ describe("SleeperAPI", () => {
         // Add more players as needed
       };
 
-      const response: AxiosResponse<{ [playerId: string]: Player }> = {
-        data: mockPlayers,
-        status: 200,
-        statusText: "OK",
-        headers: {},
-        config: {} as InternalAxiosRequestConfig,
-      };
-
-      axiosGetStub.withArgs(`/players/nfl`).resolves(response);
+      fetchStub.resolves(createMockResponse(mockPlayers));
 
       const players = await api.getAllPlayers("nfl");
       expect(players).toEqual(mockPlayers);
-      expect(axiosGetStub.calledOnce).toBe(true);
+      expect(fetchStub.calledOnce).toBe(true);
+      expect(fetchStub.firstCall.args[0]).toBe("https://api.sleeper.app/v1/players/nfl");
     });
 
     it("should handle 500 error when fetching all players", async () => {
-      const error = {
-        response: {
-          status: 500,
-          statusText: "Internal Server Error",
-          data: {},
-          headers: {},
-          config: {},
-        },
-        isAxiosError: true,
-        toJSON: () => ({}),
-      };
-
-      axiosGetStub.withArgs(`/players/nfl`).rejects(error);
+      fetchStub.resolves(createMockResponse({}, 500));
 
       await expect(api.getAllPlayers("nfl")).rejects.toThrow(
         "Internal Server Error: Problem with the server."
       );
-      expect(axiosGetStub.calledOnce).toBe(true);
+      expect(fetchStub.calledOnce).toBe(true);
+      expect(fetchStub.firstCall.args[0]).toBe("https://api.sleeper.app/v1/players/nfl");
     });
 
     it("should fetch trending players successfully", async () => {
@@ -998,48 +737,22 @@ describe("SleeperAPI", () => {
         // Add more trending players as needed
       ];
 
-      const response: AxiosResponse<TrendingPlayer[]> = {
-        data: mockTrendingPlayers,
-        status: 200,
-        statusText: "OK",
-        headers: {},
-        config: {} as InternalAxiosRequestConfig,
-      };
-
-      axiosGetStub
-        .withArgs(`/players/nfl/trending/add`, {
-          params: { lookback_hours: 24, limit: 25 },
-        })
-        .resolves(response);
+      fetchStub.resolves(createMockResponse(mockTrendingPlayers));
 
       const trendingPlayers = await api.getTrendingPlayers("nfl", "add");
       expect(trendingPlayers).toEqual(mockTrendingPlayers);
-      expect(axiosGetStub.calledOnce).toBe(true);
+      expect(fetchStub.calledOnce).toBe(true);
+      expect(fetchStub.firstCall.args[0]).toBe("https://api.sleeper.app/v1/players/nfl/trending/add?lookback_hours=24&limit=25");
     });
 
     it("should handle 429 error when fetching trending players", async () => {
-      const error = {
-        response: {
-          status: 429,
-          statusText: "Too Many Requests",
-          data: {},
-          headers: {},
-          config: {},
-        },
-        isAxiosError: true,
-        toJSON: () => ({}),
-      };
-
-      axiosGetStub
-        .withArgs(`/players/nfl/trending/add`, {
-          params: { lookback_hours: 24, limit: 25 },
-        })
-        .rejects(error);
+      fetchStub.resolves(createMockResponse({}, 429));
 
       await expect(api.getTrendingPlayers("nfl", "add")).rejects.toThrow(
         "Too Many Requests: You are being rate limited."
       );
-      expect(axiosGetStub.calledOnce).toBe(true);
+      expect(fetchStub.calledOnce).toBe(true);
+      expect(fetchStub.firstCall.args[0]).toBe("https://api.sleeper.app/v1/players/nfl/trending/add?lookback_hours=24&limit=25");
     });
   });
 });

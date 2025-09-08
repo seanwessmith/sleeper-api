@@ -1,4 +1,74 @@
-import axios, { AxiosInstance, AxiosResponse } from "axios";
+// Custom fetch wrapper types and implementation
+interface ApiResponse<T> {
+  data: T;
+  status: number;
+  statusText: string;
+}
+
+interface RequestConfig {
+  params?: Record<string, string | number>;
+  timeout?: number;
+}
+
+class ApiClient {
+  private baseURL: string;
+  private defaultTimeout: number;
+
+  constructor(baseURL: string, timeout: number = 10000) {
+    this.baseURL = baseURL;
+    this.defaultTimeout = timeout;
+  }
+
+  async get<T>(endpoint: string, config: RequestConfig = {}): Promise<ApiResponse<T>> {
+    const url = new URL(this.baseURL + endpoint);
+    
+    if (config.params) {
+      Object.entries(config.params).forEach(([key, value]) => {
+        url.searchParams.append(key, String(value));
+      });
+    }
+
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), config.timeout || this.defaultTimeout);
+
+    try {
+      const response = await fetch(url.toString(), {
+        method: 'GET',
+        signal: controller.signal,
+        headers: {
+          'Accept': 'application/json',
+          'Content-Type': 'application/json',
+        },
+      });
+
+      clearTimeout(timeoutId);
+
+      if (!response.ok) {
+        throw new HttpError(response.status, response.statusText, await response.text());
+      }
+
+      const data = await response.json() as T;
+      return {
+        data,
+        status: response.status,
+        statusText: response.statusText,
+      };
+    } catch (error) {
+      clearTimeout(timeoutId);
+      if (error instanceof Error && error.name === 'AbortError') {
+        throw new Error('Request timeout');
+      }
+      throw error;
+    }
+  }
+}
+
+class HttpError extends Error {
+  constructor(public status: number, public statusText: string, public responseText: string) {
+    super(`HTTP ${status}: ${statusText}`);
+    this.name = 'HttpError';
+  }
+}
 
 // Define Interfaces for the API responses
 
@@ -186,16 +256,11 @@ export interface TrendingPlayer {
 }
 
 export class SleeperAPI {
-  private axiosInstance: AxiosInstance;
+  private apiClient: ApiClient;
   private readonly BASE_URL: string = "https://api.sleeper.app/v1";
 
-  constructor(axiosInstance?: AxiosInstance) {
-    this.axiosInstance =
-      axiosInstance ||
-      axios.create({
-        baseURL: this.BASE_URL,
-        timeout: 10000, // 10 seconds timeout
-      });
+  constructor(apiClient?: ApiClient) {
+    this.apiClient = apiClient || new ApiClient(this.BASE_URL, 10000);
   }
 
   // User Methods
@@ -207,7 +272,7 @@ export class SleeperAPI {
    */
   public async getUserByUsername(username: string): Promise<User> {
     try {
-      const response: AxiosResponse<User> = await this.axiosInstance.get(
+      const response: ApiResponse<User> = await this.apiClient.get<User>(
         `/user/${username}`
       );
       return response.data;
@@ -223,7 +288,7 @@ export class SleeperAPI {
    */
   public async getUserById(userId: string): Promise<User> {
     try {
-      const response: AxiosResponse<User> = await this.axiosInstance.get(
+      const response: ApiResponse<User> = await this.apiClient.get<User>(
         `/user/${userId}`
       );
       return response.data;
@@ -247,7 +312,7 @@ export class SleeperAPI {
     season: string
   ): Promise<League[]> {
     try {
-      const response: AxiosResponse<League[]> = await this.axiosInstance.get(
+      const response: ApiResponse<League[]> = await this.apiClient.get<League[]>(
         `/user/${userId}/leagues/${sport}/${season}`
       );
       return response.data;
@@ -263,7 +328,7 @@ export class SleeperAPI {
    */
   public async getLeague(leagueId: string): Promise<League> {
     try {
-      const response: AxiosResponse<League> = await this.axiosInstance.get(
+      const response: ApiResponse<League> = await this.apiClient.get<League>(
         `/league/${leagueId}`
       );
       return response.data;
@@ -279,7 +344,7 @@ export class SleeperAPI {
    */
   public async getRosters(leagueId: string): Promise<Roster[]> {
     try {
-      const response: AxiosResponse<Roster[]> = await this.axiosInstance.get(
+      const response: ApiResponse<Roster[]> = await this.apiClient.get<Roster[]>(
         `/league/${leagueId}/rosters`
       );
       return response.data;
@@ -295,7 +360,7 @@ export class SleeperAPI {
    */
   public async getUsersInLeague(leagueId: string): Promise<User[]> {
     try {
-      const response: AxiosResponse<User[]> = await this.axiosInstance.get(
+      const response: ApiResponse<User[]> = await this.apiClient.get<User[]>(
         `/league/${leagueId}/users`
       );
       return response.data;
@@ -312,7 +377,7 @@ export class SleeperAPI {
    */
   public async getMatchups(leagueId: string, week: number): Promise<Matchup[]> {
     try {
-      const response: AxiosResponse<Matchup[]> = await this.axiosInstance.get(
+      const response: ApiResponse<Matchup[]> = await this.apiClient.get<Matchup[]>(
         `/league/${leagueId}/matchups/${week}`
       );
       return response.data;
@@ -328,8 +393,8 @@ export class SleeperAPI {
    */
   public async getWinnersBracket(leagueId: string): Promise<BracketMatchup[]> {
     try {
-      const response: AxiosResponse<BracketMatchup[]> =
-        await this.axiosInstance.get(`/league/${leagueId}/winners_bracket`);
+      const response: ApiResponse<BracketMatchup[]> =
+        await this.apiClient.get<BracketMatchup[]>(`/league/${leagueId}/winners_bracket`);
       return response.data;
     } catch (error) {
       this.handleError(error);
@@ -343,8 +408,8 @@ export class SleeperAPI {
    */
   public async getLosersBracket(leagueId: string): Promise<BracketMatchup[]> {
     try {
-      const response: AxiosResponse<BracketMatchup[]> =
-        await this.axiosInstance.get(`/league/${leagueId}/losers_bracket`);
+      const response: ApiResponse<BracketMatchup[]> =
+        await this.apiClient.get<BracketMatchup[]>(`/league/${leagueId}/losers_bracket`);
       return response.data;
     } catch (error) {
       this.handleError(error);
@@ -362,8 +427,8 @@ export class SleeperAPI {
     round: number
   ): Promise<Transaction[]> {
     try {
-      const response: AxiosResponse<Transaction[]> =
-        await this.axiosInstance.get(
+      const response: ApiResponse<Transaction[]> =
+        await this.apiClient.get<Transaction[]>(
           `/league/${leagueId}/transactions/${round}`
         );
       return response.data;
@@ -379,7 +444,7 @@ export class SleeperAPI {
    */
   public async getTradedPicks(leagueId: string): Promise<DraftPick[]> {
     try {
-      const response: AxiosResponse<DraftPick[]> = await this.axiosInstance.get(
+      const response: ApiResponse<DraftPick[]> = await this.apiClient.get<DraftPick[]>(
         `/league/${leagueId}/traded_picks`
       );
       return response.data;
@@ -397,7 +462,7 @@ export class SleeperAPI {
    */
   public async getState(sport: string): Promise<State> {
     try {
-      const response: AxiosResponse<State> = await this.axiosInstance.get(
+      const response: ApiResponse<State> = await this.apiClient.get<State>(
         `/state/${sport}`
       );
       return response.data;
@@ -421,7 +486,7 @@ export class SleeperAPI {
     season: string
   ): Promise<Draft[]> {
     try {
-      const response: AxiosResponse<Draft[]> = await this.axiosInstance.get(
+      const response: ApiResponse<Draft[]> = await this.apiClient.get<Draft[]>(
         `/user/${userId}/drafts/${sport}/${season}`
       );
       return response.data;
@@ -437,7 +502,7 @@ export class SleeperAPI {
    */
   public async getDraftsForLeague(leagueId: string): Promise<Draft[]> {
     try {
-      const response: AxiosResponse<Draft[]> = await this.axiosInstance.get(
+      const response: ApiResponse<Draft[]> = await this.apiClient.get<Draft[]>(
         `/league/${leagueId}/drafts`
       );
       return response.data;
@@ -453,7 +518,7 @@ export class SleeperAPI {
    */
   public async getDraft(draftId: string): Promise<Draft> {
     try {
-      const response: AxiosResponse<Draft> = await this.axiosInstance.get(
+      const response: ApiResponse<Draft> = await this.apiClient.get<Draft>(
         `/draft/${draftId}`
       );
       return response.data;
@@ -469,7 +534,7 @@ export class SleeperAPI {
    */
   public async getPicksInDraft(draftId: string): Promise<Pick[]> {
     try {
-      const response: AxiosResponse<Pick[]> = await this.axiosInstance.get(
+      const response: ApiResponse<Pick[]> = await this.apiClient.get<Pick[]>(
         `/draft/${draftId}/picks`
       );
       return response.data;
@@ -485,7 +550,7 @@ export class SleeperAPI {
    */
   public async getTradedPicksInDraft(draftId: string): Promise<DraftPick[]> {
     try {
-      const response: AxiosResponse<DraftPick[]> = await this.axiosInstance.get(
+      const response: ApiResponse<DraftPick[]> = await this.apiClient.get<DraftPick[]>(
         `/draft/${draftId}/traded_picks`
       );
       return response.data;
@@ -505,8 +570,8 @@ export class SleeperAPI {
     sport: string = "nfl"
   ): Promise<{ [playerId: string]: Player }> {
     try {
-      const response: AxiosResponse<{ [playerId: string]: Player }> =
-        await this.axiosInstance.get(`/players/${sport}`);
+      const response: ApiResponse<{ [playerId: string]: Player }> =
+        await this.apiClient.get<{ [playerId: string]: Player }>(`/players/${sport}`);
       return response.data;
     } catch (error) {
       this.handleError(error);
@@ -528,8 +593,8 @@ export class SleeperAPI {
     limit: number = 25
   ): Promise<TrendingPlayer[]> {
     try {
-      const response: AxiosResponse<TrendingPlayer[]> =
-        await this.axiosInstance.get(`/players/${sport}/trending/${type}`, {
+      const response: ApiResponse<TrendingPlayer[]> =
+        await this.apiClient.get<TrendingPlayer[]>(`/players/${sport}/trending/${type}`, {
           params: {
             lookback_hours: lookbackHours,
             limit: limit,
@@ -548,32 +613,28 @@ export class SleeperAPI {
    * @param error - The error object.
    */
   private handleError(error: any): never {
-    if (axios.isAxiosError(error)) {
-      if (error.response) {
-        const status = error.response.status;
-        switch (status) {
-          case 400:
-            throw new Error("Bad Request: Your request is invalid.");
-          case 404:
-            throw new Error(
-              "Not Found: The requested resource could not be found."
-            );
-          case 429:
-            throw new Error("Too Many Requests: You are being rate limited.");
-          case 500:
-            throw new Error("Internal Server Error: Problem with the server.");
-          case 503:
-            throw new Error(
-              "Service Unavailable: The service is temporarily offline."
-            );
-          default:
-            throw new Error(`Unexpected Error: ${status}`);
-        }
-      } else if (error.request) {
-        throw new Error("No response received from the server.");
-      } else {
-        throw new Error(`Axios Error: ${error.message}`);
+    if (error instanceof HttpError) {
+      const status = error.status;
+      switch (status) {
+        case 400:
+          throw new Error("Bad Request: Your request is invalid.");
+        case 404:
+          throw new Error(
+            "Not Found: The requested resource could not be found."
+          );
+        case 429:
+          throw new Error("Too Many Requests: You are being rate limited.");
+        case 500:
+          throw new Error("Internal Server Error: Problem with the server.");
+        case 503:
+          throw new Error(
+            "Service Unavailable: The service is temporarily offline."
+          );
+        default:
+          throw new Error(`HTTP Error: ${status} ${error.statusText}`);
       }
+    } else if (error.message === 'Request timeout') {
+      throw new Error("Request timeout: No response received from the server.");
     } else {
       throw new Error(`Unexpected Error: ${error.message}`);
     }
